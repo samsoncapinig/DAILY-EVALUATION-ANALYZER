@@ -5,16 +5,27 @@ import re
 
 st.title("Daily Evaluation Summary App")
 
-uploaded_files = st.file_uploader("Upload one or more CSV files", type=["csv","xlsx"], accept_multiple_files=True)
+uploaded_files = st.file_uploader(
+    "Upload one or more CSV/XLSX files", 
+    type=["csv", "xlsx"], 
+    accept_multiple_files=True
+)
 
 if uploaded_files:
     combined_summary = []
     combined_sessions = []
 
     for uploaded_file in uploaded_files:
-        df = pd.read_csv(uploaded_file)
-        df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+        # --- Handle both CSV and Excel ---
+        if uploaded_file.name.endswith(".csv"):
+            df = pd.read_csv(uploaded_file)
+        else:
+            df = pd.read_excel(uploaded_file)
 
+        # --- Remove unnamed columns safely ---
+        df = df.loc[:, ~df.columns.astype(str).str.contains('^Unnamed')]
+
+        # --- Categories ---
         categories = {
             "PROGRAM MANAGEMENT": [],
             "TRAINING VENUE": [],
@@ -24,53 +35,90 @@ if uploaded_files:
         }
 
         for col in df.columns:
-            if "PROGRAM MANAGEMENT" in col:
+            col_str = str(col)  # ensure it's a string
+            if "PROGRAM MANAGEMENT" in col_str:
                 categories["PROGRAM MANAGEMENT"].append(col)
-            elif "TRAINING VENUE" in col:
+            elif "TRAINING VENUE" in col_str:
                 categories["TRAINING VENUE"].append(col)
-            elif "FOOD/MEALS" in col:
+            elif "FOOD/MEALS" in col_str:
                 categories["FOOD/MEALS"].append(col)
-            elif "ACCOMMODATION" in col:
+            elif "ACCOMMODATION" in col_str:
                 categories["ACCOMMODATION"].append(col)
-            elif "->(PD Program Objectives)" in col or "->(LR Materials)" in col or "->(Content Relevance)" in col or "->(RP/Subject Matter Expert Knowledge)" in col:
+            elif any(key in col_str for key in [
+                "PD Program Objectives", 
+                "LR Materials", 
+                "Content Relevance", 
+                "RP/Subject Matter Expert Knowledge"
+            ]):
                 categories["SESSION"].append(col)
 
+        # --- Category Averages ---
         category_averages = {}
         for cat, cols in categories.items():
             if cols:
                 category_averages[cat] = df[cols].mean().mean()
 
-        summary_df = pd.DataFrame.from_dict(category_averages, orient='index', columns=['Average Score'])
+        summary_df = pd.DataFrame.from_dict(
+            category_averages, 
+            orient='index', 
+            columns=['Average Score']
+        )
         summary_df['File'] = uploaded_file.name
         combined_summary.append(summary_df)
 
+        # --- Session Averages ---
         session_cols = categories["SESSION"]
         session_groups = {}
         for col in session_cols:
-            match = re.search(r"(DAY \d+-LM\d+)", col)
+            match = re.search(r"DAY\s*\d+\s*-\s*LM\d+", str(col), re.IGNORECASE)
             if match:
-                session_key = match.group(1)
+                session_key = match.group(0).upper()
                 session_groups.setdefault(session_key, []).append(col)
 
         session_averages = {}
         for session, cols in session_groups.items():
             session_averages[session] = df[cols].mean().mean()
 
-        session_df = pd.DataFrame.from_dict(session_averages, orient='index', columns=['Average Score'])
-        session_df['File'] = uploaded_file.name
-        combined_sessions.append(session_df)
+        if session_averages:
+            session_df = pd.DataFrame.from_dict(
+                session_averages, 
+                orient='index', 
+                columns=['Average Score']
+            )
+            session_df['File'] = uploaded_file.name
+            combined_sessions.append(session_df)
 
-    final_summary = pd.concat(combined_summary)
-    final_sessions = pd.concat(combined_sessions)
+    # --- Combine all summaries ---
+    if combined_summary:
+        final_summary = pd.concat(combined_summary)
+        final_summary_reset = final_summary.reset_index().rename(columns={'index':'Category'})
 
-    st.subheader("Summary Table of Category Averages Across Files")
-    st.dataframe(final_summary)
+        st.subheader("Summary Table of Category Averages Across Files")
+        st.dataframe(final_summary_reset)
 
-    fig1 = px.bar(final_summary, x=final_summary.index, y='Average Score', color='File', title='Average Scores by Category Across Files')
-    st.plotly_chart(fig1)
+        fig1 = px.bar(
+            final_summary_reset, 
+            x='Category', 
+            y='Average Score', 
+            color='File', 
+            title='Average Scores by Category Across Files',
+            barmode='group'
+        )
+        st.plotly_chart(fig1)
 
-    st.subheader("Session-wise Averages Across Files")
-    st.dataframe(final_sessions)
+    if combined_sessions:
+        final_sessions = pd.concat(combined_sessions)
+        final_sessions_reset = final_sessions.reset_index().rename(columns={'index':'Session'})
 
-    fig2 = px.bar(final_sessions, x=final_sessions.index, y='Average Score', color='File', title='Average Scores by Session Across Files')
-    st.plotly_chart(fig2)
+        st.subheader("Session-wise Averages Across Files")
+        st.dataframe(final_sessions_reset)
+
+        fig2 = px.bar(
+            final_sessions_reset, 
+            x='Session', 
+            y='Average Score', 
+            color='File', 
+            title='Average Scores by Session Across Files',
+            barmode='group'
+        )
+        st.plotly_chart(fig2)
