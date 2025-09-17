@@ -31,7 +31,7 @@ if uploaded_files:
             elif "FOOD/MEALS" in col:
                 categories["FOOD/MEALS"].append(col)
             elif "ACCOMMODATION" in col:
-                categories["ACCOMODATION"].append(col)
+                categories["ACCOMMODATION"].append(col)
             elif "->(PD Program Objectives)" in col or "->(LR Materials)" in col or "->(Content Relevance)" in col or "->(RP/Subject Matter Expert Knowledge)" in col:
                 categories["SESSION"].append(col)
 
