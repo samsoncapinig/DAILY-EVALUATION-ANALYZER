@@ -19,7 +19,7 @@ if uploaded_files:
             "PROGRAM MANAGEMENT": [],
             "TRAINING VENUE": [],
             "FOOD/MEALS": [],
-            "ACCOMODATION": [],
+            "ACCOMMODATION": [],
             "SESSION": []
         }
 
@@ -30,9 +30,9 @@ if uploaded_files:
                 categories["TRAINING VENUE"].append(col)
             elif "FOOD/MEALS" in col:
                 categories["FOOD/MEALS"].append(col)
-            elif "ACCOMODATION" in col:
+            elif "ACCOMMODATION" in col:
                 categories["ACCOMODATION"].append(col)
-            elif "-&gt;(PD Program Objectives)" in col or "-&gt;(LR Materials)" in col or "-&gt;(Content Relevance)" in col or "-&gt;(RP/Subject Matter Expert Knowledge)" in col:
+            elif "->(PD Program Objectives)" in col or "->(LR Materials)" in col or "->(Content Relevance)" in col or "->(RP/Subject Matter Expert Knowledge)" in col:
                 categories["SESSION"].append(col)
 
         category_averages = {}
@@ -40,20 +40,8 @@ if uploaded_files:
             if cols:
                 category_averages[cat] = df[cols].mean().mean()
 
-        # Compute overall average of all indicators in the file
-        all_indicator_cols = sum(categories.values(), [])  # Flatten all category columns
-        overall_average = df[all_indicator_cols].mean().mean()
-
         summary_df = pd.DataFrame.from_dict(category_averages, orient='index', columns=['Average Score'])
         summary_df['File'] = uploaded_file.name
-
-        # Add overall average to summary_df
-        overall_df = pd.DataFrame({
-            'Average Score': [overall_average],
-            'File': [uploaded_file.name]
-        }, index=['OVERALL AVERAGE'])
-
-        summary_df = pd.concat([summary_df, overall_df])
         combined_summary.append(summary_df)
 
         session_cols = categories["SESSION"]
