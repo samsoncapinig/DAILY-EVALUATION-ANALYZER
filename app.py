@@ -18,20 +18,14 @@ if uploaded_files:
 
         for col in df.columns:
             for indicator in indicators:
-                if indicator == "SESSION":
-                    if any(key in col for key in ["PD Program Objectives", "LR Materials", "Content Relevance", "RP/Subject Matter Expert Knowledge"]):
-                        match = re.search(r"(DAY \\d+)", col)
-                        if match:
-                            day = match.group(1)
-                            if day in days:
-                                indicator_day_scores[indicator][day].append(df[col])
-                elif indicator in col:
-                    match = re.search(r"(DAY \\d+)", col)
+                if indicator in col:
+                    match = re.search(r"(DAY \d+)", col)
                     if match:
                         day = match.group(1)
                         if day in days:
                             indicator_day_scores[indicator][day].append(df[col])
 
+    # Build summary table
     summary_data = []
     for indicator in indicators:
         row = [indicator]
