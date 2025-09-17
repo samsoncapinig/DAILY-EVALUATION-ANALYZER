@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 import re
 
 st.title("Daily Evaluation Summary App")
@@ -8,81 +7,60 @@ st.title("Daily Evaluation Summary App")
 uploaded_files = st.file_uploader("Upload one or more CSV files", type=["csv"], accept_multiple_files=True)
 
 if uploaded_files:
-    combined_summary = []
-    combined_sessions = []
+    indicators = ["PROGRAM MANAGEMENT", "TRAINING VENUE", "FOOD/MEALS", "ACCOMODATION", "SESSION"]
+    days = ["DAY 1", "DAY 2", "DAY 3", "DAY 4", "DAY 5"]
+
+    indicator_day_scores = {indicator: {day: [] for day in days} for indicator in indicators}
 
     for uploaded_file in uploaded_files:
         df = pd.read_csv(uploaded_file)
         df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
 
-        categories = {
-            "PROGRAM MANAGEMENT": [],
-            "TRAINING VENUE": [],
-            "FOOD/MEALS": [],
-            "ACCOMMODATION": [],
-            "SESSION": []
-        }
-
         for col in df.columns:
-            if "PROGRAM MANAGEMENT" in col:
-                categories["PROGRAM MANAGEMENT"].append(col)
-            elif "TRAINING VENUE" in col:
-                categories["TRAINING VENUE"].append(col)
-            elif "FOOD/MEALS" in col:
-                categories["FOOD/MEALS"].append(col)
-            elif "ACCOMMODATION" in col:
-                categories["ACCOMMODATION"].append(col)
-            elif "-&gt;(PD Program Objectives)" in col or "-&gt;(LR Materials)" in col or "-&gt;(Content Relevance)" in col or "-&gt;(RP/Subject Matter Expert Knowledge)" in col:
-                categories["SESSION"].append(col)
+            for indicator in indicators:
+                if indicator == "SESSION":
+                    if any(key in col for key in ["PD Program Objectives", "LR Materials", "Content Relevance", "RP/Subject Matter Expert Knowledge"]):
+                        match = re.search(r"(DAY \d+)", col)
+                        if match:
+                            day = match.group(1)
+                            if day in days:
+                                indicator_day_scores[indicator][day].append(df[col])
+                elif indicator in col:
+                    match = re.search(r"(DAY \d+)", col)
+                    if match:
+                        day = match.group(1)
+                        if day in days:
+                            indicator_day_scores[indicator][day].append(df[col])
 
-        category_averages = {}
-        for cat, cols in categories.items():
-            if cols:
-                category_averages[cat] = df[cols].mean().mean()
+    summary_data = []
+    for indicator in indicators:
+        row = [indicator]
+        day_averages = []
+        for day in days:
+            if indicator_day_scores[indicator][day]:
+                day_df = pd.concat(indicator_day_scores[indicator][day], axis=1)
+                avg_score = day_df.mean().mean()
+            else:
+                avg_score = None
+            row.append(avg_score)
+            day_averages.append(avg_score)
+        valid_scores = [score for score in day_averages if score is not None]
+        overall_avg = sum(valid_scores) / len(valid_scores) if valid_scores else None
+        row.append(overall_avg)
+        summary_data.append(row)
 
-        # Compute overall average of all indicators in the file
-        all_indicator_cols = sum(categories.values(), [])  # Flatten all category columns
-        overall_average = df[all_indicator_cols].mean().mean()
+    columns = ["Indicator"] + days + ["Average"]
+    summary_df = pd.DataFrame(summary_data, columns=columns)
 
-        summary_df = pd.DataFrame.from_dict(category_averages, orient='index', columns=['Average Score'])
-        summary_df['File'] = uploaded_file.name
+    # Final row: average per day and overall average
+    final_row = ["OVERALL AVERAGE"]
+    for day in days:
+        day_scores = summary_df[day].dropna()
+        final_row.append(day_scores.mean() if not day_scores.empty else None)
+    overall_scores = summary_df["Average"].dropna()
+    final_row.append(overall_scores.mean() if not overall_scores.empty else None)
 
-        # Add overall average to summary_df
-        overall_df = pd.DataFrame({
-            'Average Score': [overall_average],
-            'File': [uploaded_file.name]
-        }, index=['OVERALL AVERAGE'])
+    summary_df.loc[len(summary_df.index)] = final_row
 
-        summary_df = pd.concat([summary_df, overall_df])
-        combined_summary.append(summary_df)
-
-        session_cols = categories["SESSION"]
-        session_groups = {}
-        for col in session_cols:
-            match = re.search(r"(DAY \d+-LM\d+)", col)
-            if match:
-                session_key = match.group(1)
-                session_groups.setdefault(session_key, []).append(col)
-
-        session_averages = {}
-        for session, cols in session_groups.items():
-            session_averages[session] = df[cols].mean().mean()
-
-        session_df = pd.DataFrame.from_dict(session_averages, orient='index', columns=['Average Score'])
-        session_df['File'] = uploaded_file.name
-        combined_sessions.append(session_df)
-
-    final_summary = pd.concat(combined_summary)
-    final_sessions = pd.concat(combined_sessions)
-
-    st.subheader("Summary Table of Category Averages Across Files")
-    st.dataframe(final_summary)
-
-    fig1 = px.bar(final_summary, x=final_summary.index, y='Average Score', color='File', title='Average Scores by Category Across Files')
-    st.plotly_chart(fig1)
-
-    st.subheader("Session-wise Averages Across Files")
-    st.dataframe(final_sessions)
-
-    fig2 = px.bar(final_sessions, x=final_sessions.index, y='Average Score', color='File', title='Average Scores by Session Across Files')
-    st.plotly_chart(fig2)
+    st.subheader("Evaluation Summary Table")
+    st.dataframe(summary_df)
