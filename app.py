@@ -59,13 +59,6 @@ if uploaded_files:
 
         if category_averages:
             summary_df = pd.DataFrame.from_dict(category_averages, orient='index', columns=['Average Score'])
-            summary_df['Average Score'] = summary_df['Average Score'].round(2)
-
-            # Add General Average row
-            general_avg = summary_df['Average Score'].mean().round(2)
-            general_row = pd.DataFrame({"Average Score": [general_avg]}, index=["General Average"])
-            summary_df = pd.concat([summary_df, general_row])
-
             summary_df['File'] = uploaded_file.name
             combined_summary.append(summary_df)
 
@@ -96,13 +89,6 @@ if uploaded_files:
 
         if session_averages:
             session_df = pd.DataFrame.from_dict(session_averages, orient='index', columns=['Average Score'])
-            session_df['Average Score'] = session_df['Average Score'].round(2)
-
-            # Add General Average row
-            general_avg = session_df['Average Score'].mean().round(2)
-            general_row = pd.DataFrame({"Average Score": [general_avg]}, index=["General Average"])
-            session_df = pd.concat([session_df, general_row])
-
             session_df['File'] = uploaded_file.name
             combined_sessions.append(session_df)
 
@@ -113,7 +99,7 @@ if uploaded_files:
         st.dataframe(final_summary)
 
         fig1 = px.bar(
-            final_summary[final_summary.index != "General Average"],  # Exclude General Average in chart
+            final_summary,
             x=final_summary.index,
             y="Average Score",
             color="File",
@@ -128,7 +114,7 @@ if uploaded_files:
         st.dataframe(final_sessions)
 
         fig2 = px.bar(
-            final_sessions[final_sessions.index != "General Average"],  # Exclude General Average in chart
+            final_sessions,
             x=final_sessions.index,
             y="Average Score",
             color="File",
