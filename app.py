@@ -12,13 +12,8 @@ uploaded_files = st.file_uploader(
 )
 
 if uploaded_files:
-    combined_categories = {
-        "PROGRAM MANAGEMENT": [],
-        "TRAINING VENUE": [],
-        "FOOD/MEALS": [],
-        "ACCOMMODATION": []
-    }
-    combined_sessions = []
+    combined_summary = []   # For program management, venue, food, accommodation
+    combined_sessions = []  # For sessions
 
     for uploaded_file in uploaded_files:
         # Handle CSV or Excel
@@ -55,19 +50,19 @@ if uploaded_files:
             ]):
                 categories["SESSION"].append(col)
 
-        # Process non-session categories
+        # ---- Non-session categories in one table ----
+        category_averages = {}
         for cat in ["PROGRAM MANAGEMENT", "TRAINING VENUE", "FOOD/MEALS", "ACCOMMODATION"]:
             cols = categories[cat]
             if cols:
-                avg_score = df[cols].mean().mean()
-                summary_df = pd.DataFrame({
-                    "Category": [cat],
-                    "Average Score": [avg_score],
-                    "File": [uploaded_file.name]
-                })
-                combined_categories[cat].append(summary_df)
+                category_averages[cat] = df[cols].mean().mean()
 
-        # Process session columns
+        if category_averages:
+            summary_df = pd.DataFrame.from_dict(category_averages, orient='index', columns=['Average Score'])
+            summary_df['File'] = uploaded_file.name
+            combined_summary.append(summary_df)
+
+        # ---- Sessions ----
         session_cols = categories["SESSION"]
         session_groups = {}
         for col in session_cols:
@@ -97,23 +92,22 @@ if uploaded_files:
             session_df['File'] = uploaded_file.name
             combined_sessions.append(session_df)
 
-    # Display category tables separately
-    for cat, dfs in combined_categories.items():
-        if dfs:
-            final_cat_df = pd.concat(dfs)
-            st.subheader(f"{cat} - Averages Across Files")
-            st.dataframe(final_cat_df)
+    # ---- Display category table ----
+    if combined_summary:
+        final_summary = pd.concat(combined_summary)
+        st.subheader("Category Averages Across Files (Program Management, Venue, Food, Accommodation)")
+        st.dataframe(final_summary)
 
-            fig = px.bar(
-                final_cat_df,
-                x="Category",
-                y="Average Score",
-                color="File",
-                title=f"Average Scores - {cat}"
-            )
-            st.plotly_chart(fig)
+        fig1 = px.bar(
+            final_summary,
+            x=final_summary.index,
+            y="Average Score",
+            color="File",
+            title="Average Scores by Category Across Files"
+        )
+        st.plotly_chart(fig1)
 
-    # Display sessions
+    # ---- Display sessions table ----
     if combined_sessions:
         final_sessions = pd.concat(combined_sessions)
         st.subheader("Session-wise Averages Across Files")
