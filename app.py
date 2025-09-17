@@ -8,7 +8,7 @@ st.title("Daily Evaluation Summary App")
 uploaded_files = st.file_uploader("Upload one or more CSV files", type=["csv"], accept_multiple_files=True)
 
 if uploaded_files:
-    indicators = ["PROGRAM MANAGEMENT", "TRAINING VENUE", "FOOD/MEALS", "ACCOMODATION", "SESSION"]
+    indicators = ["PROGRAM MANAGEMENT", "TRAINING VENUE", "FOOD/MEALS", "ACCOMMODATION", "SESSION"]
     days = ["DAY 1", "DAY 2", "DAY 3", "DAY 4", "DAY 5"]
 
     indicator_day_scores = {indicator: {day: [] for day in days} for indicator in indicators}
