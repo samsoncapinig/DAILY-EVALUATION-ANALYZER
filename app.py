@@ -55,10 +55,11 @@ if uploaded_files:
         for cat in ["PROGRAM MANAGEMENT", "TRAINING VENUE", "FOOD/MEALS", "ACCOMMODATION"]:
             cols = categories[cat]
             if cols:
-                category_averages[cat] = df[cols].mean().mean()
+                category_averages[cat] = df[cols].mean().mean().round(2)
 
         if category_averages:
             summary_df = pd.DataFrame.from_dict(category_averages, orient='index', columns=['Average Score'])
+            summary_df['Average Score'] = summary_df['Average Score'].round(2)  # enforce 2 decimals
             summary_df['File'] = uploaded_file.name
             combined_summary.append(summary_df)
 
@@ -85,16 +86,18 @@ if uploaded_files:
 
         session_averages = {}
         for session, cols in session_groups.items():
-            session_averages[session] = df[cols].mean().mean()
+            session_averages[session] = df[cols].mean().mean().round(2)
 
         if session_averages:
             session_df = pd.DataFrame.from_dict(session_averages, orient='index', columns=['Average Score'])
+            session_df['Average Score'] = session_df['Average Score'].round(2)  # enforce 2 decimals
             session_df['File'] = uploaded_file.name
             combined_sessions.append(session_df)
 
     # ---- Display category table ----
     if combined_summary:
         final_summary = pd.concat(combined_summary)
+        final_summary['Average Score'] = final_summary['Average Score'].round(2)  # enforce 2 decimals
         st.subheader("Category Averages Across Files (Program Management, Venue, Food, Accommodation)")
         st.dataframe(final_summary)
 
@@ -110,6 +113,7 @@ if uploaded_files:
     # ---- Display sessions table ----
     if combined_sessions:
         final_sessions = pd.concat(combined_sessions)
+        final_sessions['Average Score'] = final_sessions['Average Score'].round(2)  # enforce 2 decimals
         st.subheader("Session-wise Averages Across Files")
         st.dataframe(final_sessions)
 
