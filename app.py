@@ -5,7 +5,7 @@ import re
 
 st.title("Daily Evaluation Summary App")
 
-uploaded_files = st.file_uploader("Upload one or more CSV files", type=["csv"], accept_multiple_files=True)
+uploaded_files = st.file_uploader("Upload one or more CSV files", type=["csv","xlsx"], accept_multiple_files=True)
 
 if uploaded_files:
     combined_summary = []
