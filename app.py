@@ -70,7 +70,7 @@ if uploaded_files:
         session_cols = categories["SESSION"]
         session_groups = {}
         for col in session_cols:
-            match = re.search(r"DAY\s*\d+\s*-\s*LM\d+", str(col), re.IGNORECASE)
+           match = re.search(r"DAY\s*\d+\s*[-–]?\s*LM\s*\d+", str(col), re.IGNORECASE)
             if match:
                 session_key = match.group(0).upper()
                 session_groups.setdefault(session_key, []).append(col)
